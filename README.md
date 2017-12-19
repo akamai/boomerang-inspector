@@ -24,3 +24,10 @@ https://docs.microsoft.com/en-us/microsoft-edge/extensions/guides/adding-and-rem
 - Goto Extensions in the menu
 - "Load extension" button
 - In the extension settings, turn it on and enable "Show button next to address bar"
+
+## Opera
+https://dev.opera.com/extensions/testing/
+
+- Navigate to opera://extensions/
+- "Developer mode" checkbox
+- "Load unpacked extension..." button
