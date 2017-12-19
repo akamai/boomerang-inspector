@@ -1,12 +1,23 @@
 function load() {
-    var message;
+    var message, apikey;
 
-    // send content-script basic boomerang info
+    // mPulse specific
+    apikey = window.BOOMR_API_key;
+    if (!apikey && BOOMR.url) {
+      var m = /\/boomerang\/([A-Z0-9-]{29})/.exec(BOOMR.url);
+      if (m && m.length >= 2) {
+        apikey = m[1];
+      }
+    }
+
+    // send basic boomerang and mPulse info to content-script
     message = {
         type: "boomr",
         data: {
             version: BOOMR.version,
-            apikey: window.BOOMR_API_key,
+
+            // mPulse specific
+            apikey: apikey,
             url: BOOMR.url,
             config_url: BOOMR.config_url
         }
@@ -26,17 +37,11 @@ function load() {
     });
 }
 
-if (window.BOOMR && typeof BOOMR.subscribe === "function") {
-    load();
-}
-else if (document.addEventListener) {
-      document.addEventListener("onBoomerangLoaded", load);
-}
-else if (document.attachEvent) {
-    document.attachEvent("onpropertychange", function(e) {
-        e = e || window.event;
-        if (e && e.propertyName === "onBoomerangLoaded") {
-            load();
-        }
-    });
-}
+(function init() {
+    if (window.BOOMR && typeof BOOMR.subscribe === "function") {
+        load();
+    }
+    else if (document.addEventListener) {
+        document.addEventListener("onBoomerangLoaded", load);
+    }
+})();
