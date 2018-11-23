@@ -1,8 +1,9 @@
 {
     "name": "Boomerang Inspector",
-    "version": "0.1.0",
-    "description": "Boomerand Inspector Browser extension",
+    "version": "0.2.4",
+    "description": "Boomerang Inspector Browser extension",
     "author": "Nigel Heron",
+    "homepage_url": "https://github.com/querymetrics/boomerang-inspector",
     "background": {
         "scripts": [
             "src/background.js"
@@ -11,7 +12,7 @@
     },
     "browser_action": {
         "default_title": "Boomerang Inspector",
-        "default_popup": "src/popup.html",
+        "default_popup": "src/popup/popup.html",
         "default_icon": {
             "128": "icons/boomr-128x128.png",
             "48": "icons/boomr-48x48.png",
@@ -27,20 +28,33 @@
     },
     "permissions": [
         "tabs",
+        "webRequest",
+        "webNavigation",
         "http://*/*",
         "https://*/*"
     ],
+    "sandbox": {
+         "pages": ["src/devtools/sandbox.html"],
+         "content_security_policy": "sandbox allow-scripts; script-src 'self' 'unsafe-eval'"
+    },
+    "devtools_page": "src/devtools/devtools.html",
     "content_scripts": [{
-        "matches": [
-            "http://*/*",
-            "https://*/*"
-        ],
-        "js": ["src/content-script.js"],
-        "run_at": "document_start",
-        "all_frames": false
+          "matches": [
+              "http://*/*",
+              "https://*/*"
+          ],
+          "js": [
+              "src/injected-script.js",
+              "src/content-script.js"
+          ],
+          "run_at": "document_start",
+          "all_frames": false
     }],
     "web_accessible_resources": [
         "src/injected-script.js"
     ],
+    "options_ui": {
+        "page":"src/options.html"
+    },
     "manifest_version": 2
 }

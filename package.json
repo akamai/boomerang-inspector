@@ -1,0 +1,8 @@
+{
+    "devDependencies": {
+        "eslint": "^5.9.0",
+        "handlebars": "^4.0.12",
+        "resourcetiming-compression": "^1.1.0",
+        "usertiming-compression": "^0.1.8"
+    }
+}
