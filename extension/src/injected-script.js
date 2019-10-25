@@ -128,7 +128,7 @@ function injectedFunction() {
     function boomerangLoaded() {
         var apikey, scripts, i, script, data = {}, event;
 
-        document.removeEventListener("onBoomerangLoaded", load);
+        document.removeEventListener("onBoomerangLoaded", boomerangLoaded);
 
         // check for non-blocking loader snippet in the base page.
         // Won't detect loads from tag managers or if included from other scripts
@@ -219,9 +219,9 @@ function injectedFunction() {
     }
 
     (function init(w) {
-        var a = document.createElement("A");
+        const a = document.createElement("A");
 
-        var flags = {
+        const flags = {
             instrumentHistory: true,
             monitorNatives: true
         };
@@ -236,6 +236,7 @@ function injectedFunction() {
             return;
         }
 
+        // create a `BI` boomerang plugin so that we can monitor plugin events
         window.BOOMR = window.BOOMR || {};
         BOOMR.plugins = BOOMR.plugins || {};
         BOOMR.plugins.BI = {
@@ -364,7 +365,6 @@ function injectedFunction() {
             message = {type: "event", event: "resourcetimingbufferfull", timeStamp: event.timeStamp};
             window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
         });
-        //performance.setResourceTimingBufferSize(5);
 
         if (window.PerformanceObserver) {
             observer = new PerformanceObserver(function(list, obj) {
@@ -418,36 +418,34 @@ function injectedFunction() {
                 monitorProps(Promise, "Promise", MONITOR_PROMISE);
             }
 
-            if (w.performance) {
-                // monitor calls to performance.clearResourceTimings
-                if (typeof w.performance.clearResourceTimings === "function") {
-                    handler = {
-                        apply: function __bi_clearResourceTimings(target, thisArg, argumentsList) {
-                            var now = performance.now(), e = new Error(), message;
-                            message = {type: "call", method: "performance.clearResourceTimings", stack: e.stack, timeStamp: now};
-                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                            return target.apply(thisArg, argumentsList);
-                        }
-                    };
-                    performance.clearResourceTimings = new Proxy(performance.clearResourceTimings, handler);
-                }
-
-                // monitor calls to performance.setResourceTimingBufferSize
-                if (typeof w.performance.setResourceTimingBufferSize === "function") {
-                    handler = {
-                        apply: function __bi_setResourceTimingBufferSize(target, thisArg, argumentsList) {
-                            var now = performance.now(), e = new Error(), message;
-                            message = {type: "call", method: "performance.setResourceTimingBufferSize", stack: e.stack, timeStamp: now};
-                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                            return target.apply(thisArg, argumentsList);
-                        }
-                    };
-                    performance.setResourceTimingBufferSize = new Proxy(performance.setResourceTimingBufferSize, handler);
-                }
-
-                // monitor some important native objects in performance
-                monitorProps(performance, "performance", MONITOR_PERFORMANCE);
+            // monitor calls to performance.clearResourceTimings
+            if (typeof w.performance.clearResourceTimings === "function") {
+                handler = {
+                    apply: function __bi_clearResourceTimings(target, thisArg, argumentsList) {
+                        var now = performance.now(), e = new Error(), message;
+                        message = {type: "call", method: "performance.clearResourceTimings", stack: e.stack, timeStamp: now};
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                        return target.apply(thisArg, argumentsList);
+                    }
+                };
+                performance.clearResourceTimings = new Proxy(performance.clearResourceTimings, handler);
             }
+
+            // monitor calls to performance.setResourceTimingBufferSize
+            if (typeof w.performance.setResourceTimingBufferSize === "function") {
+                handler = {
+                    apply: function __bi_setResourceTimingBufferSize(target, thisArg, argumentsList) {
+                        var now = performance.now(), e = new Error(), message;
+                        message = {type: "call", method: "performance.setResourceTimingBufferSize", stack: e.stack, timeStamp: now};
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                        return target.apply(thisArg, argumentsList);
+                    }
+                };
+                performance.setResourceTimingBufferSize = new Proxy(performance.setResourceTimingBufferSize, handler);
+            }
+
+            // monitor some important native objects in performance
+            monitorProps(performance, "performance", MONITOR_PERFORMANCE);
 
             if (w.MutationObserver && MutationObserver.prototype) {
                 // if (typeof w.MutationObserver.prototype.observe === "function") {
@@ -462,19 +460,19 @@ function injectedFunction() {
                 //     })(MutationObserver.prototype.observe);
                 // }
 
-                // monitor calls to MutationObserver disconnect
-                if (typeof w.MutationObserver.prototype.disconnect === "function") {
-                    MutationObserver.prototype.disconnect = (function(_disconnect) {
-                        return function __bi_disconnect() {
-                            // overriden by Boomerang Inspector
-                            var now = performance.now(), e = new Error(), message;
-                            message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
-                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                            return _disconnect.apply(this, arguments);
-                        };
-                    })(MutationObserver.prototype.disconnect);
-                }
+                // if (typeof w.MutationObserver.prototype.disconnect === "function") {
+                //     MutationObserver.prototype.disconnect = (function(_disconnect) {
+                //         return function __bi_disconnect() {
+                //             // overriden by Boomerang Inspector
+                //             var now = performance.now(), e = new Error(), message;
+                //             message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
+                //             window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                //             return _disconnect.apply(this, arguments);
+                //         };
+                //     })(MutationObserver.prototype.disconnect);
+                // }
 
+                // monitor calls to MutationObserver observe
                 if (typeof w.MutationObserver.prototype.observe === "function") {
                     handler = {
                         apply: function __bi_observe(target, thisArg, argumentsList) {
@@ -488,20 +486,25 @@ function injectedFunction() {
                     MutationObserver.prototype.observe = new Proxy(MutationObserver.prototype.observe, handler);
                 }
 
-                handler = {
-                    apply: function __bi_disconnect(target, thisArg, argumentsList) {
-                        var now = performance.now(), e = new Error(), message;
-                        message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
-                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                        return target.apply(thisArg, argumentsList);
-                    }
-                };
+                // monitor calls to MutationObserver disconnect
+                if (typeof w.MutationObserver.prototype.disconnect === "function") {
+                    handler = {
+                        apply: function __bi_disconnect(target, thisArg, argumentsList) {
+                            var now = performance.now(), e = new Error(), message;
+                            message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            return target.apply(thisArg, argumentsList);
+                        }
+                    };
 
-                MutationObserver.prototype.disconnect = new Proxy(MutationObserver.prototype.disconnect, handler);
+                    MutationObserver.prototype.disconnect = new Proxy(MutationObserver.prototype.disconnect, handler);
+                }
 
+                // monitor some important native objects in MutationObserver
                 monitorProps(MutationObserver.prototype, "MutationObserver.prototype", MONITOR_MUTATIONOBSERVER);
             }
 
+            // monitor some important native objects in console
             if (w.console) {
                 monitorProps(console, "console", MONITOR_CONSOLE);
             }
