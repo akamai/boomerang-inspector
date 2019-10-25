@@ -13,6 +13,7 @@ var COLUMNS = [
     "page_group",
     "u",
     "rt.tstart",
+    "rt.end",
     "t_resp",
     "t_page",
     "t_done"

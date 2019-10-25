@@ -19,5 +19,8 @@ function getBeaconType(beacon) {
             type = "page_view (" + beacon["rt.start"] + ")";
         }
     }
+    if (typeof beacon["early"]  !== "undefined") {
+        type += " (early)";
+    }
     return type;
 }

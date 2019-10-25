@@ -1,11 +1,12 @@
 {
     "env": {
         "browser": true,
-        "webextensions": true
+        "webextensions": true,
+        "es6": true
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "ecmaVersion": 5
+        "ecmaVersion": 6
     },
     "rules": {
         "indent": [

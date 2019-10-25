@@ -4,6 +4,99 @@
 
 function injectedFunction() {
 
+    const MONITOR_WINDOW = [
+            "XMLHttpRequest",
+            "fetch",
+            "MutationObserver",
+            "history",
+            "addEventListener", "removeEventListener",
+            "setTimeout", "clearTimeout",
+            "setInterval", "clearInterval",
+            "requestIdleCallback", "cancelIdleCallback",
+            "performance",
+            "requestAnimationFrame", "webkitRequestAnimationFrame",
+            "cancelAnimationFrame", "webkitCancelAnimationFrame",
+            "Promise",
+            "CustomEvent",
+            "onerror",
+            "onhashchange",
+            "onpopstate",
+            "onmessage",
+            "onunhandledrejection",
+            "onstorage",
+            "onunload",
+            "Error"
+        ],
+        MONITOR_WINDOW_FORCED = [  // monitor these even if currently undefined
+            "BOOMR_config",
+            "BOOMR"
+        ],
+        MONITOR_HISTORY = [
+            "pushState",
+            "replaceState",
+            "go",
+            "back",
+            "forward"
+        ],
+        MONITOR_NAVIGATOR = [
+            "sendBeacon"
+        ],
+        MONITOR_EVENTTARGET = [
+            "addEventListener",
+            "removeEventListener"
+        ],
+        MONITOR_RESPONSE = [
+            "arrayBuffer",
+            "blob",
+            "formData",
+            "json",
+            "text",
+            "arrayBuffer",
+            "blob",
+            "formData",
+            "json",
+            "text"
+        ],
+        MONITOR_XHR = [
+            "open",
+            "send"
+        ],
+        MONITOR_PROMISE = [
+            "all",
+            "race",
+            "resolve",
+            "reject"
+        ],
+        MONITOR_PERFORMANCE = [
+            "mark",
+            "measure",
+            "now",
+            "getEntries",
+            "getEntriesByName",
+            "getEntriesByType",
+            "onresourcetimingbufferfull",
+            "clearResourceTimings",
+            "clearMarks",
+            "clearMeasures",
+            "navigation",
+            "timing",
+            "timeOrigin",
+            "memory",
+            "setResourceTimingBufferSize"
+            //webkitSetResourceTimingBufferSize
+        ],
+        MONITOR_MUTATIONOBSERVER = [
+            "observe",
+            "disconnect"
+        ],
+        MONITOR_CONSOLE = [
+            "error",
+            "warn",
+            "log",
+            "info",
+            "clear"
+        ];
+
     function monitorProp(obj, objName, prop, force) {
         if (force || (prop in obj && typeof obj[prop] !== "undefined")) {
             obj["__bi_native_" + prop] = obj[prop];
@@ -17,7 +110,9 @@ function injectedFunction() {
                     this["__bi_native_" + prop] = newValue;
                     e = new Error();
                     window.dispatchEvent(new CustomEvent("BIEvent", {detail: {type: "override", native: objName + "." + prop, stack: e.stack, timeStamp: now}}));
-                }
+                },
+                //writable: true,
+                configurable: true  // allow redefine
             });
         }
     }
@@ -30,7 +125,7 @@ function injectedFunction() {
         }
     }
 
-    function load() {
+    function boomerangLoaded() {
         var apikey, scripts, i, script, data = {}, event;
 
         document.removeEventListener("onBoomerangLoaded", load);
@@ -93,13 +188,11 @@ function injectedFunction() {
 
         // config event
         BOOMR.subscribe("config", function(config) {
-            var now = performance.now();
             window.dispatchEvent(new CustomEvent("BIConfigEvent", {detail: config}));
         });
 
         // beacon event
         BOOMR.subscribe("beacon", function(beacon) {
-            var now = performance.now();
             window.dispatchEvent(new CustomEvent("BIBeaconEvent", {detail: beacon}));
         });
 
@@ -112,8 +205,13 @@ function injectedFunction() {
             event = EVENTS[i];
             BOOMR.subscribe(event, (function(evt) {
                 return function() {
-                    var now = performance.now(), e = new Error(), message;
-                    message = {type: "boomrevent", event: evt, arguments: JSON.stringify(arguments), stack: e.stack, timeStamp: now};
+                    var now = performance.now(), e = new Error(), args, message;
+                    try {
+                        args = JSON.stringify(arguments);
+                    } catch (err) {
+                        // NOOP
+                    }
+                    message = {type: "boomrevent", event: evt, arguments: args, stack: e.stack, timeStamp: now};
                     window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
                 };
             })(event));
@@ -121,13 +219,14 @@ function injectedFunction() {
     }
 
     (function init(w) {
-        var props;
         var a = document.createElement("A");
 
         var flags = {
             instrumentHistory: true,
             monitorNatives: true
         };
+
+        var observer, handler;
 
         // log something to make it easier to find this anonymous script in devtools
         console.log("Boomerang Inspector: init start @ " + performance.now());
@@ -267,79 +366,152 @@ function injectedFunction() {
         });
         //performance.setResourceTimingBufferSize(5);
 
+        if (window.PerformanceObserver) {
+            observer = new PerformanceObserver(function(list, obj) {
+                var now = performance.now(), message, entries = list.getEntries();
+                var ENTRYTYPES = {
+                    "navigation": "PerformanceNavigationTiming",
+                    "mark": "PerformanceMark",
+                    "measure": "PerformanceMeasure"
+                };
+                for (var i = 0; i < entries.length; i++) {
+                    message = {type: "event", event: ENTRYTYPES[entries[i].entryType], entry: JSON.stringify(entries[i]), timeStamp: now};
+                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                }
+            });
+            observer.observe({entryTypes: ["navigation", "mark", "measure"]});
+        }
+
         if (flags.monitorNatives) {
+            // TODO: localStorage, cookies ?
             // monitor some important native objects in window
-            props = [
-                "XMLHttpRequest",
-                "fetch",
-                "MutationObserver",
-                "history",
-                "addEventListener", "removeEventListener",
-                "setTimeout", "clearTimeout",
-                "setInterval", "clearInterval",
-                "requestIdleCallback", "cancelIdleCallback",
-                "performance",
-                "requestAnimationFrame", "webkitRequestAnimationFrame",
-                "Promise",
-                "CustomEvent",
-                "onerror"
-            ];
-            // localStorage ?
-            monitorProps(w, "window", props);
+            monitorProps(w, "window", MONITOR_WINDOW);
+            monitorProps(w, "window", MONITOR_WINDOW_FORCED, true);  // monitor these even if currently undefined
 
-            props = ["BOOMR_config", "BOOMR"];
-            monitorProps(w, "window", props, true);
-
+            // monitor some important native objects in history
             if (w.history) {
-                // monitor some important native objects in history
-                props = ["pushState", "replaceState", "go", "back", "forward"];
-                monitorProps(history, "history", props);
+                monitorProps(history, "history", MONITOR_HISTORY);
             }
 
             // monitor some important native objects in navigator
             if (w.navigator) {
-                props = ["sendBeacon"];
-                monitorProps(navigator, "navigator", props);
+                monitorProps(navigator, "navigator", MONITOR_NAVIGATOR);
             }
 
+            // monitor some important native objects in EventTarget
             if (w.EventTarget && EventTarget.prototype) {
-                props = ["addEventListener", "removeEventListener"];
-                monitorProps(EventTarget.prototype, "EventTarget.prototype", props);
+                monitorProps(EventTarget.prototype, "EventTarget.prototype", MONITOR_EVENTTARGET);
             }
 
+            // monitor some important native objects in Response
             if (w.Response && Response.prototype) {
-                props = ["arrayBuffer", "blob", "formData", "json", "text", "arrayBuffer", "blob", "formData", "json", "text"];
-                monitorProps(Response.prototype, "Response.prototype", props);
+                monitorProps(Response.prototype, "Response.prototype", MONITOR_RESPONSE);
             }
 
+            // monitor some important native objects in XMLHttpRequest
             if (w.XMLHttpRequest && XMLHttpRequest.prototype) {
-                props = ["open", "send"];
-                monitorProps(XMLHttpRequest.prototype, "XMLHttpRequest.prototype", props);
+                monitorProps(XMLHttpRequest.prototype, "XMLHttpRequest.prototype", MONITOR_XHR);
             }
 
+            // monitor some important native objects in Promise
             if (w.Promise) {
-                props = ["all", "race", "resolve", "reject"];
-                monitorProps(Promise, "Promise", props);
+                monitorProps(Promise, "Promise", MONITOR_PROMISE);
             }
 
-            props = ["mark", "measure", "now", "getEntries", "getEntriesByName", "getEntriesByType", "onresourcetimingbufferfull"];
-            monitorProps(performance, "performance", props);
+            if (w.performance) {
+                // monitor calls to performance.clearResourceTimings
+                if (typeof w.performance.clearResourceTimings === "function") {
+                    handler = {
+                        apply: function __bi_clearResourceTimings(target, thisArg, argumentsList) {
+                            var now = performance.now(), e = new Error(), message;
+                            message = {type: "call", method: "performance.clearResourceTimings", stack: e.stack, timeStamp: now};
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            return target.apply(thisArg, argumentsList);
+                        }
+                    };
+                    performance.clearResourceTimings = new Proxy(performance.clearResourceTimings, handler);
+                }
+
+                // monitor calls to performance.setResourceTimingBufferSize
+                if (typeof w.performance.setResourceTimingBufferSize === "function") {
+                    handler = {
+                        apply: function __bi_setResourceTimingBufferSize(target, thisArg, argumentsList) {
+                            var now = performance.now(), e = new Error(), message;
+                            message = {type: "call", method: "performance.setResourceTimingBufferSize", stack: e.stack, timeStamp: now};
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            return target.apply(thisArg, argumentsList);
+                        }
+                    };
+                    performance.setResourceTimingBufferSize = new Proxy(performance.setResourceTimingBufferSize, handler);
+                }
+
+                // monitor some important native objects in performance
+                monitorProps(performance, "performance", MONITOR_PERFORMANCE);
+            }
+
+            if (w.MutationObserver && MutationObserver.prototype) {
+                // if (typeof w.MutationObserver.prototype.observe === "function") {
+                //     MutationObserver.prototype.observe = (function(_observe) {
+                //         return function __bi_observe() {
+                //             // overriden by Boomerang Inspector
+                //             var now = performance.now(), e = new Error(), message;
+                //             message = {type: "call", method: "MutationObserver.prototype.observe", stack: e.stack, timeStamp: now};
+                //             window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                //             return _observe.apply(this, arguments);
+                //         };
+                //     })(MutationObserver.prototype.observe);
+                // }
+
+                // monitor calls to MutationObserver disconnect
+                if (typeof w.MutationObserver.prototype.disconnect === "function") {
+                    MutationObserver.prototype.disconnect = (function(_disconnect) {
+                        return function __bi_disconnect() {
+                            // overriden by Boomerang Inspector
+                            var now = performance.now(), e = new Error(), message;
+                            message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            return _disconnect.apply(this, arguments);
+                        };
+                    })(MutationObserver.prototype.disconnect);
+                }
+
+                if (typeof w.MutationObserver.prototype.observe === "function") {
+                    handler = {
+                        apply: function __bi_observe(target, thisArg, argumentsList) {
+                            var now = performance.now(), e = new Error(), message;
+                            message = {type: "call", method: "MutationObserver.prototype.observe", stack: e.stack, timeStamp: now};
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            return target.apply(thisArg, argumentsList);
+                        }
+                    };
+
+                    MutationObserver.prototype.observe = new Proxy(MutationObserver.prototype.observe, handler);
+                }
+
+                handler = {
+                    apply: function __bi_disconnect(target, thisArg, argumentsList) {
+                        var now = performance.now(), e = new Error(), message;
+                        message = {type: "call", method: "MutationObserver.prototype.disconnect", stack: e.stack, timeStamp: now};
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                        return target.apply(thisArg, argumentsList);
+                    }
+                };
+
+                MutationObserver.prototype.disconnect = new Proxy(MutationObserver.prototype.disconnect, handler);
+
+                monitorProps(MutationObserver.prototype, "MutationObserver.prototype", MONITOR_MUTATIONOBSERVER);
+            }
 
             if (w.console) {
-                props = ["error", "warn", "log", "info", "clear"];
-                monitorProps(console, "console", props);
+                monitorProps(console, "console", MONITOR_CONSOLE);
             }
         }
 
-        //performance calls to
-        //setResourceTimingBufferSize clearResourceTimings
-        //onresourcetimingbufferfull ?
-
         if (w.BOOMR && typeof BOOMR.subscribe === "function") {
-            load();
+            boomerangLoaded();
         }
         else if (w.document && typeof document.addEventListener === "function") {
-            document.addEventListener("onBoomerangLoaded", load);
+            document.addEventListener("onBoomerangLoaded", boomerangLoaded);
         }
 
         console.log("Boomerang Inspector: init end @ " + performance.now());

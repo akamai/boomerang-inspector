@@ -45,7 +45,7 @@ window.addEventListener("BIEvent", function(event) {
 // Only injecting into the base page for now, not any iframes.
 // Inject using textContent instead of src filename so that it runs asap
 var s = document.createElement("script");
-
+s.type = "text/javascript";
 s.textContent = "(" + injectedFunction.toString() + ")();";
 s.onload = function() {
     this.remove();
