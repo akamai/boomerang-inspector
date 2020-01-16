@@ -1,0 +1,43 @@
+{
+    "name": "Boomerang Inspector",
+    "version": "",
+    "description": "Boomerang Inspector Browser extension",
+    "author": "Nigel Heron",
+    "homepage_url": "https://github.com/querymetrics/boomerang-inspector",
+    "background": {
+        "scripts": [
+            "background.js"
+        ],
+        "persistent": true
+    },
+    "browser_action": {
+        "default_title": "Boomerang Inspector",
+        "default_popup": "popup/popup.html",
+        "default_icon": {
+            "128": "icons/boomr-128x128-gray.png",
+            "48": "icons/boomr-48x48-gray.png",
+            "32": "icons/boomr-32x32-gray.png",
+            "20": "icons/boomr-20x20-gray.png"
+        }
+    },
+    "icons": {
+        "128": "icons/boomr-128x128.png",
+        "48": "icons/boomr-48x48.png",
+        "32": "icons/boomr-32x32.png",
+        "20": "icons/boomr-20x20.png"
+    },
+    "permissions": [
+        "tabs",
+        "webRequest",
+        "webNavigation",
+        "webRequestBlocking",
+        "storage",
+        "http://*/*",
+        "https://*/*"
+    ],
+    "devtools_page": "devtools/devtools.html",
+    "options_ui": {
+        "page":"options/options.html"
+    },
+    "manifest_version": 2
+}

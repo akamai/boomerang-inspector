@@ -1,8 +1,29 @@
 {
+    "name": "boomerang-inspector",
+    "version": "0.4.0",
+    "description": "Boomerang Inspector Browser Extension",
+    "author": "Nigel Heron <nheron@querymetrics.com>",
+    "license": "",
+    "private": true,
+    "scripts": {
+        "build": "cross-env NODE_ENV=production webpack --hide-modules"
+    },
     "devDependencies": {
-        "eslint": "^6.5.1",
-        "handlebars": "^4.4.5",
+        "@babel/core": "^7.8.0",
+        "@babel/preset-env": "^7.8.2",
+        "babel-loader": "^8.0.6",
+        "copy-webpack-plugin": "^5.1.1",
+        "cross-env": "^6.0.3",
+        "css-loader": "^3.4.2",
+        "eslint": "^6.8.0",
+        "json5": "^2.1.1",
+        "mini-css-extract-plugin": "^0.9.0",
         "resourcetiming-compression": "^1.2.4",
-        "usertiming-compression": "^0.1.9"
+        "usertiming-compression": "^0.1.9",
+        "vue": "^2.6.11",
+        "vue-loader": "^15.8.3",
+        "vue-template-compiler": "^2.6.11",
+        "webpack": "^4.41.5",
+        "webpack-cli": "^3.3.10"
     }
 }
