@@ -7,13 +7,20 @@ var portsFromDevtools = {};  // hashed by inspected window tabId
 
 var BI_enabled = true;
 
-var BI_options = {};
+var BI_DEFAULT_OPTIONS = {
+    monitorNatives: false,
+    monitorHistory: false,
+    monitorCookies: false
+};
+
+var BI_options = BI_DEFAULT_OPTIONS;
 
 /**
  * refreshes the browser action icon
  */
-function refreshBadge(tabId) {
-    var tabData = tabsData[tabId], beaconCount, suffix = "";
+function refreshBadge(tabId) { 
+    const tabData = tabsData[tabId];
+    let beaconCount, suffix = "";
 
     if (tabData && tabData.session && tabData.session.rate_limited) {
         browser.browserAction.setBadgeBackgroundColor({color: "#cc3333", tabId: tabId});
@@ -40,7 +47,9 @@ function refreshBadge(tabId) {
     browser.browserAction.enable(tabId);
 }
 
-// listen for messages from content script and popup
+/**
+ * Listen for messages from popup or devtools
+ */
 browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     // check tabId in message first since sender tabId will be -1 when the event is from the devtools panel
     var tabId = (message && message.tabId) || (sender && sender.tab && sender.tab.id);
@@ -60,7 +69,9 @@ browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     }
 });
 
-// listen for connections from content-script and devtools
+/**
+ * Listen for connections from content-script and devtools
+ */
 browser.runtime.onConnect.addListener(function connected(port) {
     var connInfo, tabId, data;
     try {
@@ -228,23 +239,28 @@ browser.runtime.onConnect.addListener(function connected(port) {
     }
 });
 
-// tab activated
-// needs `tabs` permission
-// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onActivated
-// https://developer.chrome.com/extensions/tabs#event-onActivated
+/**
+ * Tab activated
+ * 
+ * needs `tabs` permission
+ * https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onActivated
+ * https://developer.chrome.com/extensions/tabs#event-onActivated 
+*/
 browser.tabs.onActivated.addListener(function(activeInfo) {
     refreshBadge(activeInfo.tabId);
 });
 
-// tab updated
-// needs `tabs` permission
-// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onUpdated
-// https://developer.chrome.com/extensions/tabs#event-onUpdated
+/**
+ * Tab updated
+ * 
+ * needs `tabs` permission
+ * https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onUpdated
+ * https://developer.chrome.com/extensions/tabs#event-onUpdated
+ */
 browser.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     var now = performance.now();
     //console.log("onUpdated: " + JSON.stringify(changeInfo));
     if (tabId >= 0 && changeInfo && changeInfo.url) {
-
         if (portsFromDevtools[tabId]) {
             changeInfo.timeStamp = now;
             portsFromDevtools[tabId].postMessage({type: "onUpdated", data: changeInfo});
@@ -262,9 +278,13 @@ browser.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 //     delete tabsData[tabId];
 // });
 
-// needs `webNavigation` permission
-// See https://developer.chrome.com/extensions/webNavigation#event-onCommitted
-// See https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webNavigation/onCommitted
+/**
+ * Listen for navigations
+ * 
+ * needs `webNavigation` permission
+ * See https://developer.chrome.com/extensions/webNavigation#event-onCommitted
+ * See https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webNavigation/onCommitted
+ */
 browser.webNavigation.onCommitted.addListener(function(details) {
     if (!BI_enabled) {
         return;
@@ -274,7 +294,7 @@ browser.webNavigation.onCommitted.addListener(function(details) {
         if (details.frameId === 0) {
             tabsData[details.tabId] = {beaconCount: 0};  // reset
             
-            // set config then inject the script
+            // send options to web page then inject the script
             chrome.tabs.executeScript(details.tabId, {
                 frameId: 0,
                 code: "var options = '" + JSON.stringify(BI_options) + "';",
@@ -297,9 +317,13 @@ browser.webNavigation.onCommitted.addListener(function(details) {
     }
 });
 
-// needs `webNavigation` permission
-// See https://developer.chrome.com/extensions/webNavigation#event-onHistoryStateUpdated
-// See https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webNavigation/onHistoryStateUpdated
+/**
+ * Send History changes to devtools
+ * 
+ * needs `webNavigation` permission
+ * See https://developer.chrome.com/extensions/webNavigation#event-onHistoryStateUpdated
+ * See https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webNavigation/onHistoryStateUpdated
+ */
 browser.webNavigation.onHistoryStateUpdated.addListener(function(details) {
     if (details && details.tabId >= 0 && details.frameId === 0) {  // don't report frame activity for now
         if (portsFromDevtools[details.tabId]) {
@@ -308,6 +332,9 @@ browser.webNavigation.onHistoryStateUpdated.addListener(function(details) {
     }
 });
 
+/**
+ * Listen for options changes
+*/
 browser.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === "local") {
         for (var key in changes) {
@@ -318,17 +345,9 @@ browser.storage.onChanged.addListener(function(changes, namespace) {
 });
 
 (function init() {
-    browser.browserAction.setBadgeBackgroundColor({color: "#33cc33"});
-    browser.browserAction.setBadgeText({text: ""});
-    browser.browserAction.disable();
+    refreshBadge();
 
-    browser.storage.local.get({
-        monitorNatives: false,
-        monitorHistory: false,
-        monitorCookies: false
-    }, (res) => {
+    browser.storage.local.get(BI_DEFAULT_OPTIONS, (res) => {
         BI_options = res;
     });
-
-
 })();

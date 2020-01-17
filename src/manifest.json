@@ -30,7 +30,7 @@
         "tabs",
         "webRequest",
         "webNavigation",
-        "webRequestBlocking",
+        // "webRequestBlocking",
         "storage",
         "http://*/*",
         "https://*/*"

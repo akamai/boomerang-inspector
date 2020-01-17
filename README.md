@@ -1,3 +1,10 @@
+# Build
+
+`npm i`
+
+`npm build`
+
+Built extension will be in the `dist` folder
 
 
 # Loading
