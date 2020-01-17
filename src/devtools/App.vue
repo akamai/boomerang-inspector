@@ -107,11 +107,23 @@ export default {
                         this.apikey = undefined;
                         this.overrides = undefined;
                         this.config = undefined;
-                        this.events = [];
-                        // message.data.isNavigation = true;
-                        // message.data.type = "Navigation";
-                        // events.push(message.data);
+                        this.clearEvents();
+
+                        const event = {};
+                        event.id = eventId++;
+                        event.component = "EventItem";
+                        event.type = "navigation-commited";
+                        event.params = message.data;
+                        this.events.push(event);
                     }
+                }
+                else if (message.type === "onCookieChanged") {
+                    const event = {};
+                    event.id = eventId++;
+                    event.component = "EventItem";
+                    event.type = "cookie-changed";
+                    event.params = message.data;
+                    this.events.push(event);
                 }
                 else if (message.type === "onBeacon") {
                     const event = message.data
@@ -138,19 +150,20 @@ export default {
 
                 else if (message.type === "onHistoryStateUpdated") {
                     if (message.data.frameId === 0) {  // only show top window activity for now
-                        const event = message.data
+                        const event = {};
                         event.id = eventId++;
-                        //event.params = message.data;
-                        //event.type = "History";
                         event.component = "EventItem";
+                        event.type = "history-updated";
+                        event.params = message.data;
                         this.events.push(event);
                     }
                 }
                 else if (message.type === "onUpdated") {
-                    const event = message.data
+                    const event = {};
                     event.id = eventId++;
-                    //event.type = "URL Update";
                     event.component = "EventItem";
+                    event.type = "tab-updated";
+                    event.params = message.data;
                     this.events.push(event);
                 }
 

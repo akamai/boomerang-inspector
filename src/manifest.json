@@ -27,11 +27,12 @@
         "20": "icons/boomr-20x20.png"
     },
     "permissions": [
-        "tabs",
+        //"tabs",  // 
         "webRequest",
         "webNavigation",
-        "webRequestBlocking",
-        "storage",
+        // "webRequestBlocking",
+        "storage",  // store extension options
+        "cookies",  // background page listens for boomr cookie changes
         "http://*/*",
         "https://*/*"
     ],

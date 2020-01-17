@@ -99,6 +99,11 @@ export function injectedFunction(options) {
             "clear"
         ];
 
+    //PerformanceObserver.supportedEntryTypes
+    // ["element", "first-input", "largest-contentful-paint", "layout-shift", "longtask", "mark", "measure", "navigation", "paint", "resource"]
+
+    // FF: unsupported entryTypes: paint, longtask.
+    // [ "mark", "measure", "navigation", "resource" ]
     const PERF_ENTRY_NAMES = {
         "navigation": "PerformanceNavigationTiming",
         "frame": "PerformanceFrameTiming",
@@ -106,7 +111,8 @@ export function injectedFunction(options) {
         "mark": "PerformanceMark",
         "measure": "PerformanceMeasure",
         "paint": "PerformancePaintTiming",
-        "longtask": "PerformanceLongTaskTiming"
+        "longtask": "PerformanceLongTaskTiming",
+        "largest-contentful-paint": "LargestContentfulPaint"
     };
 
     const PERF_OBSERVE_TYPES = [
@@ -263,6 +269,10 @@ export function injectedFunction(options) {
             if (/ensighten.com\//.test(BOOMR.snippetScript)) {
                 data.injection = "Ensighten";
             }
+           // Ensighten (nexus.ensighten.com, nexus-test.ensighten.com)
+           // Google Tag Manager (www.googletagmanager.com)
+           // Adobe DTM/Launch (assets.adobedtm.com)
+           // Tealium (tags.tiqcdn.com, collect.tealiumiq.com)
         }
 
         data.version = BOOMR.version;
