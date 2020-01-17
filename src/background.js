@@ -14,6 +14,7 @@ var BI_DEFAULT_OPTIONS = {
 };
 
 var BI_options = BI_DEFAULT_OPTIONS;
+var BI_contentScript = "";
 
 /**
  * refreshes the browser action icon
@@ -293,20 +294,14 @@ browser.webNavigation.onCommitted.addListener(function(details) {
     if (details && details.tabId >= 0) {
         if (details.frameId === 0) {
             tabsData[details.tabId] = {beaconCount: 0};  // reset
-            
-            // send options to web page then inject the script
-            chrome.tabs.executeScript(details.tabId, {
+
+            // send options to web page and inject the content-script.
+            // Injecting the content-script as a string is faster than using a second executeScript with the `file` option
+            browser.tabs.executeScript(details.tabId, {
                 frameId: 0,
-                code: "var options = '" + JSON.stringify(BI_options) + "';",
+                code: "var options = '" + JSON.stringify(BI_options) + "';\n" + BI_contentScript,
                 runAt: "document_start",
                 allFrames: false
-            }, () => {
-                chrome.tabs.executeScript(details.tabId, {
-                    frameId: 0,
-                    file: "content-script.js",
-                    runAt: "document_start",
-                    allFrames: false
-                });
             });
 
             refreshBadge(details.tabId);
@@ -318,16 +313,35 @@ browser.webNavigation.onCommitted.addListener(function(details) {
 });
 
 /**
- * Send History changes to devtools
+ * Send History API changes to devtools
  * 
  * needs `webNavigation` permission
  * See https://developer.chrome.com/extensions/webNavigation#event-onHistoryStateUpdated
  * See https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webNavigation/onHistoryStateUpdated
  */
 browser.webNavigation.onHistoryStateUpdated.addListener(function(details) {
+    //eg. "{"frameId":0,"parentFrameId":-1,"processId":654,"tabId":309,"timeStamp":1579289651941.5679,"transitionQualifiers":[],"transitionType":"link","url":"https://example.com/"}"
     if (details && details.tabId >= 0 && details.frameId === 0) {  // don't report frame activity for now
         if (portsFromDevtools[details.tabId]) {
             portsFromDevtools[details.tabId].postMessage({type: "onHistoryStateUpdated", data: details});
+        }
+    }
+});
+
+/**
+ * Listen for boomr cookie changes
+ */
+browser.cookies.onChanged.addListener(function(changeInfo) {
+    // only check RT cookie for now
+    if (!changeInfo || !changeInfo.cookie || changeInfo.cookie.name !== "RT") {
+        return;
+    }
+
+    // send to all devtool ports
+    // TODO: check session domain, and only send to those affected
+    for (var tabId in portsFromDevtools) {
+        if (portsFromDevtools.hasOwnProperty(tabId) && portsFromDevtools[tabId]) {
+            portsFromDevtools[tabId].postMessage({type: "onCookieChanged", data: changeInfo});
         }
     }
 });
@@ -350,4 +364,12 @@ browser.storage.onChanged.addListener(function(changes, namespace) {
     browser.storage.local.get(BI_DEFAULT_OPTIONS, (res) => {
         BI_options = res;
     });
+
+    var url = chrome.extension.getURL("content-script.js");
+    fetch(url).then((response) => {
+        return response.text() }
+    ).then((text) => {
+        BI_contentScript = text;
+    });
+
 })();

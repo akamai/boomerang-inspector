@@ -83,6 +83,8 @@ export default {
 #content {
   margin: 10px;
   white-space: nowrap;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
 }
 td.bold-red {
     color: rgb(212, 33, 33);
