@@ -1,6 +1,12 @@
-
+# Building
+```
+$ npm install
+$ npm run-script build
+```
 
 # Loading
+
+To install the extension, you'll need to point your browser to the `dist` sub-directory.  Instructions for each browser:
 
 ## Chrome
 https://developer.chrome.com/extensions/getstarted#unpacked
