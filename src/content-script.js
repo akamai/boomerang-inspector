@@ -50,12 +50,15 @@ window.addEventListener("BIEvent", function(event) {
     // we'll inject a script into base page which will have access. The injected script will
     // send us data via messages.
     // Only injecting into the base page for now, not any iframes.
+    // Only inject if the contentType is text/html
     // Inject using textContent instead of src filename so that it runs asap
-    var s = document.createElement("script");
-    s.type = "text/javascript";
-    s.textContent = "(" + injectedFunction.toString() + ")('" + options + "');";  // `options` is JSON string defined by background script
-    s.onload = function() {
-        this.remove();
-    };
-    document.documentElement.appendChild(s);
+    if (document.contentType === "text/html") {
+        var s = document.createElement("script");
+        s.type = "text/javascript";
+        s.textContent = "(" + injectedFunction.toString() + ")('" + options + "');";  // `options` is JSON string defined by background script
+        s.onload = function() {
+            this.remove();
+        };
+        document.documentElement.appendChild(s);
+    }
 })();
