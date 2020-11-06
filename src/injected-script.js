@@ -204,6 +204,7 @@ export function injectedFunction(options) {
                     value = setupSessionProxy(value);
                 }
                 else if (prop === "version") {
+                    // log a message to the console. The console will make a stack trace for this log entry and make it easy for us to find/debug this script
                     console.log(
                         `%c boomerang-inspector %c Detected Boomerang v${value} %c`,
                         'background:#35495e; padding: 1px; border-radius: 3px 0 0 3px; color: #fff;',
@@ -223,6 +224,15 @@ export function injectedFunction(options) {
                 obj[prop] = value;
                 message = {type: "boomr", params: {method: "BOOMR." + prop}, stack: e.stack, timestamp: now};
                 window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+
+                if (prop == "subscribe")
+                {
+                    // this happens sooner than `onBoomerangLoaded` event
+                    if (typeof value === "function") {
+                        boomerangLoaded();
+                    }
+                }
+
                 return true;
             }
         };
@@ -232,8 +242,6 @@ export function injectedFunction(options) {
     function boomerangLoaded() {
         var apikey, scripts, i, script, data = {}, event;
         const now = performance.now(), e = new Error();
-
-        document.removeEventListener("onBoomerangLoaded", boomerangLoaded);
 
         // check for non-blocking loader snippet in the base page.
         // Won't detect loads from tag managers or if included from other scripts
@@ -308,14 +316,14 @@ export function injectedFunction(options) {
         // send basic boomerang info to content-script
         window.dispatchEvent(new CustomEvent("BIInfoEvent", {detail: {params: data, stack: e.stack, timestamp: now}}));
 
-        // config event
-        BOOMR.subscribe("config", function(config) {
+        // config event. `onconfig` (now renamed to `config`) should work in all versions of Boomerang
+        BOOMR.subscribe("onconfig", function(config) {
             const now = performance.now(), e = new Error();
             window.dispatchEvent(new CustomEvent("BIConfigEvent", {detail: {params: config, stack: e.stack, timestamp: now}}));
         });
 
-        // beacon event
-        BOOMR.subscribe("beacon", function(beacon) {
+        // beacon event. `onbeacon` (now renamed to `beacon`) should work in all versions of Boomerang
+        BOOMR.subscribe("onbeacon", function(beacon) {
             const now = performance.now(), e = new Error();
             window.dispatchEvent(new CustomEvent("BIBeaconEvent", {detail: {params: beacon, stack: e.stack, timestamp: now}}));
         });
@@ -726,13 +734,11 @@ export function injectedFunction(options) {
 
         w.BOOMR = setupBOOMRProxy(w.BOOMR);
 
+        // if `subscribe` isn't yet available, we'll know when it is declared using the proxy which
+        // will occur earlier than listening for the `onBoomerangLoaded` event
         if (typeof w.BOOMR.subscribe === "function") {
             boomerangLoaded();
         }
-        else if (w.document && typeof document.addEventListener === "function") {
-            document.addEventListener("onBoomerangLoaded", boomerangLoaded);
-        }
-
         //console.log("Boomerang Inspector: init end @ " + performance.now());
     })(window);
 }

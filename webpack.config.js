@@ -70,7 +70,6 @@ module.exports = {
   performance: {
     hints: false
   },
-  devtool: '#eval-source-map',
   plugins: [
     new webpack.DefinePlugin({
       global: 'window',
@@ -107,12 +106,25 @@ module.exports = {
 }
 
 if (process.env.NODE_ENV === 'production') {
-  module.exports.devtool = '#source-map'
-  // http://vue-loader.vuejs.org/en/workflow/production.html
+  module.exports.devtool = false  // no source maps
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': {
         NODE_ENV: '"production"'
+      }
+    }),
+
+    new webpack.LoaderOptionsPlugin({
+      minimize: true
+    })
+  ])
+}
+else if (process.env.NODE_ENV === 'development') {
+  module.exports.devtool = '#source-map'  // CSP compliant
+  module.exports.plugins = (module.exports.plugins || []).concat([
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: '"development"'
       }
     }),
 
