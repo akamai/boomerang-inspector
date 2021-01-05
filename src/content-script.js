@@ -47,11 +47,11 @@ window.addEventListener("BIEvent", function(event) {
 
 (function inject() {
     // we don't have access to the variables in the window object of the base page so
-    // we'll inject a script into base page which will have access. The injected script will
-    // send us data via messages.
-    // Only injecting into the base page for now, not any iframes.
-    // Only inject if the contentType is text/html
-    // Inject using textContent instead of src filename so that it runs asap
+    // we'll inject a script into base page which will have access.
+    // The injected script will send us data via messages.
+    // Only inject into the base page for now, not any iframes.
+    // Only inject if the contentType is text/html.
+    // Inject using `textContent` instead of src filename so that it runs asap
     if (document.contentType === "text/html") {
         var s = document.createElement("script");
         s.type = "text/javascript";

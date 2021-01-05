@@ -348,7 +348,7 @@ browser.cookies.onChanged.addListener(function(changeInfo) {
 
 /**
  * Listen for options changes
-*/
+ */
 browser.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === "local") {
         for (var key in changes) {
@@ -361,15 +361,16 @@ browser.storage.onChanged.addListener(function(changes, namespace) {
 (function init() {
     refreshBadge();
 
+    // read the extension options stored in local storage
     browser.storage.local.get(BI_DEFAULT_OPTIONS, (res) => {
         BI_options = res;
     });
 
+    // read the content script and cache it
     var url = chrome.extension.getURL("content-script.js");
     fetch(url).then((response) => {
-        return response.text() }
-    ).then((text) => {
+        return response.text();
+    }).then((text) => {
         BI_contentScript = text;
     });
-
 })();

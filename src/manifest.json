@@ -28,7 +28,7 @@
     },
     "permissions": [
         //"tabs",  // 
-        "webRequest",
+        "webRequest",  // background page captures URLs of network requests
         "webNavigation",
         // "webRequestBlocking",
         "storage",  // store extension options

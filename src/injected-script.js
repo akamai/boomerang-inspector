@@ -99,29 +99,25 @@ export function injectedFunction(options) {
             "clear"
         ];
 
-    //PerformanceObserver.supportedEntryTypes
-    // ["element", "first-input", "largest-contentful-paint", "layout-shift", "longtask", "mark", "measure", "navigation", "paint", "resource"]
-
-    // FF: unsupported entryTypes: paint, longtask.
-    // [ "mark", "measure", "navigation", "resource" ]
-    const PERF_ENTRY_NAMES = {
-        "navigation": "PerformanceNavigationTiming",
-        "frame": "PerformanceFrameTiming",
-        "resource": "PerformanceResourceTiming",
+    // PerformanceObserver.supportedEntryTypes
+    // Chrome: ["element", "event", "first-input", "largest-contentful-paint", "layout-shift", "longtask", "mark", "measure", "navigation", "paint", "resource"]
+    // FF: [ "mark", "measure", "navigation", "resource" ]
+    const PERF_OBSERVE_TYPES = {
+        "element": "PerformanceElementTiming",
+        "event": "PerformanceEventTiming",
+        "first-input": "first-input",  // doesn't have a unique interface? PerformanceEventTiming https://github.com/WICG/event-timing
+        "largest-contentful-paint": "LargestContentfulPaint",  // https://github.com/WICG/largest-contentful-paint
+        "layout-shift": "LayoutShift",  // PerformanceEntry https://github.com/WICG/layout-instability
+        "longtask": "PerformanceLongTaskTiming",
         "mark": "PerformanceMark",
         "measure": "PerformanceMeasure",
+        "navigation": "PerformanceNavigationTiming",
         "paint": "PerformancePaintTiming",
-        "longtask": "PerformanceLongTaskTiming",
-        "largest-contentful-paint": "LargestContentfulPaint"
+        "resource": "PerformanceResourceTiming"
+        //"frame": "PerformanceFrameTiming"
     };
 
-    const PERF_OBSERVE_TYPES = [
-        "navigation",
-        //"frame",
-        "paint",
-        "longtask"
-    ];
-
+    // Reporting API https://w3c.github.io/reporting/
     const REPORT_ENTRY_NAMES = {
         "deprecation": "ReportingObserver deprecation",
         "intervention": "ReportingObserver intervention",
@@ -129,6 +125,7 @@ export function injectedFunction(options) {
     };
 
     const MONITOR_BOOMR_EVENTS = [
+        // `beacon` and `config` will be monitored independantly
         "page_unload", "before_unload", "dom_loaded", "visibility_changed", "prerender_to_visible",
         "before_beacon", "beacon", "page_load_beacon", "xhr_load", "click", "form_submit", "config", "xhr_init",
         "spa_init", "spa_navigation", "spa_cancel", "xhr_send", "xhr_error", "error", "netinfo", "rage_click",
@@ -162,6 +159,9 @@ export function injectedFunction(options) {
         }
     }
 
+    /**
+     * Proxy for BOOMR.session set property calls
+     */
     function setupSessionProxy(session) {
         var handler_session = {
             set: function(obj, prop, value) {
@@ -178,6 +178,109 @@ export function injectedFunction(options) {
         return new Proxy(session, handler_session);
     }
 
+    /**
+     * Proxy for BOOMR.plugins set property calls
+     */
+    function setupPluginsProxy(plugins) {
+        var handler_plugins = {
+            set: function(obj, prop, value) {
+                let now = performance.now(), e = new Error(), message;
+                let oldvalue = obj[prop];
+                obj[prop] = value;
+ 
+                if (oldvalue !== value) {
+                    // console.log("PLUGINS: " + prop);
+                    message = {type: "plugins", params: {method: "BOOMR.plugins." + prop}, stack: e.stack, timestamp: now};
+                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                }
+                if (prop === "AutoXHR") {
+                    setupAutoXHRPluginProxy();
+                }
+                return true;
+            }
+        };
+
+        if (typeof plugins.AutoXHR !== "undefined") {
+            // we injected late, the plugin is already defined
+            setupAutoXHRPluginProxy();
+        }
+        return new Proxy(plugins, handler_plugins);
+    }
+
+
+    /**
+     * Monitor AutoXHR/SPA pending events and sub-resources
+     */
+    function setupAutoXHRPluginProxy() {
+        var mh = BOOMR.plugins.AutoXHR.getMutationHandler();
+
+        var handler_resources = {
+            set: function(obj, prop, value) {
+
+                obj[prop] = value;
+
+                if (/^\d+$/.test(prop)) {
+                    //console.log("Inspector adding resource " + JSON.stringify(prop));
+                
+                    var now = performance.now(), e = new Error(), message;
+                    message = {type: "track", params: {method: "autoxhr:resource:add"}, stack: e.stack, timestamp: now};
+                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                }
+
+                return true;
+            }
+        };
+        var handler_urls = {
+            set: function(obj, prop, value) {
+                obj[prop] = value;
+                if (prop) {
+                    //console.log("Inspector adding url " + JSON.stringify(prop) + ": " + JSON.stringify(value));
+
+                    var now = performance.now(), e = new Error(), message;
+                    message = {type: "track", params: {method: "autoxhr:url:add"}, stack: e.stack, timestamp: now, url: prop};
+                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                }
+                return true;
+            }
+        };
+
+        var handler_pending_events = {
+            // get: function __bi_get(obj, prop) {
+            //     /console.log("Inspector get " + JSON.stringify(prop));
+            //     if (prop === "undefined") debugger;
+            //     return obj[prop];
+            // },
+            set: function(obj, prop, value) {
+                var now = performance.now(), e = new Error(), message;
+                if (/^\d+$/.test(prop)) {
+                    if (typeof value === "undefined") {
+                        //console.log("Inspector removing event " + JSON.stringify(obj[prop]));
+
+                        message = {type: "track", params: {method: "autoxhr:event:remove", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                    }
+                    else {
+                        //console.log("Inspector adding event " + JSON.stringify(prop) + ": " + JSON.stringify(value));
+                        if (value.resources) {
+                            value.resources = new Proxy(value.resources, handler_resources);  // monitor tracked resources
+                        }
+
+                        message = {type: "track", params: {method: "autoxhr:event:add", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+
+                        value.urls = new Proxy(value.urls || {}, handler_urls);  // monitor tracked urls
+                    }
+                }
+                obj[prop] = value;
+                return true;
+            }
+        };
+        mh.pending_events = new Proxy(mh.pending_events, handler_pending_events);
+    }
+
+    /**
+     * Proxy for BOOMR.addVar method calls
+     */
     function setupAddVarProxy(addVar) {
         var handler_addVar = {
             apply: function(target, thisArg, argumentsList) {
@@ -198,38 +301,47 @@ export function injectedFunction(options) {
         var handler_BOOMR = {
             set: function(obj, prop, value) {
                 var now = performance.now(), e = new Error(), message;
-                //console.log("BOOMR set " + prop);
-                if (prop === "session") {
-                    //console.trace("BOOMR session overwrite");
-                    value = setupSessionProxy(value);
-                }
-                else if (prop === "version") {
-                    // log a message to the console. The console will make a stack trace for this log entry and make it easy for us to find/debug this script
-                    console.log(
-                        `%c boomerang-inspector %c Detected Boomerang v${value} %c`,
-                        'background:#35495e; padding: 1px; border-radius: 3px 0 0 3px; color: #fff;',
-                        'background:#0099CC; padding: 1px; border-radius: 0 3px 3px 0; color: #fff;',
-                        'background:transparent'
-                      )
-                }
-                else if (prop === "snippetExecuted") {
-                    if (e.stack && e.stack.length) {
-                        let stack = e.stack.split("\n");
-                        obj["snippetScript"] = stack[stack.length - 1];  // todo: parse better
+                let oldvalue = obj[prop];
+
+                if (oldvalue !== value) {  // check if the value changed so that we don't proxy our proxies
+                    //console.log("BOOMR set " + prop);
+                    if (prop === "session") {
+                        //console.trace("BOOMR session overwrite");
+                        value = setupSessionProxy(value);
+                    }
+                    else if (prop === "version" && typeof value === "string") {
+                        // log a message to the console. The console will make a stack trace for this log entry and make it easy for us to find/debug this script
+                        console.log(
+                            `%c boomerang-inspector %c Detected Boomerang v${value} %c`,
+                            'background:#35495e; padding: 1px; border-radius: 3px 0 0 3px; color: #fff;',
+                            'background:#0099CC; padding: 1px; border-radius: 0 3px 3px 0; color: #fff;',
+                            'background:transparent'
+                        )
+                    }
+                    else if (prop === "snippetExecuted") {
+                        if (e.stack && e.stack.length) {
+                            let stack = e.stack.split("\n");
+                            obj["snippetScript"] = stack[stack.length - 1];  // todo: parse better
+                        }
+                    }
+                    else if (prop === "addVar") {
+                        value = setupAddVarProxy(value);
+                    }
+                    else if (prop === "plugins")
+                    {
+                        value = setupPluginsProxy(value);
                     }
                 }
-                else if (prop === "addVar") {
-                    value = setupAddVarProxy(value);
-                }
                 obj[prop] = value;
+
                 message = {type: "boomr", params: {method: "BOOMR." + prop}, stack: e.stack, timestamp: now};
                 window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
 
-                if (prop == "subscribe")
+                if (oldvalue !== value && prop === "subscribe")
                 {
                     // this happens sooner than `onBoomerangLoaded` event
                     if (typeof value === "function") {
-                        boomerangLoaded();
+                        boomerangDetected();
                     }
                 }
 
@@ -239,7 +351,10 @@ export function injectedFunction(options) {
         return new Proxy(boomr, handler_BOOMR);
     }
 
-    function boomerangLoaded() {
+    /**
+     * Get basic boomerang information (version, vendor, etc.) and subscribe to some boomr events
+     */
+    function boomerangDetected() {
         var apikey, scripts, i, script, data = {}, event;
         const now = performance.now(), e = new Error();
 
@@ -319,7 +434,9 @@ export function injectedFunction(options) {
         // config event. `onconfig` (now renamed to `config`) should work in all versions of Boomerang
         BOOMR.subscribe("onconfig", function(config) {
             const now = performance.now(), e = new Error();
-            window.dispatchEvent(new CustomEvent("BIConfigEvent", {detail: {params: config, stack: e.stack, timestamp: now}}));
+            if (config && !config.primary) { // ignore the config call from init() for now
+                window.dispatchEvent(new CustomEvent("BIConfigEvent", {detail: {params: config, stack: e.stack, timestamp: now}}));
+            }
         });
 
         // beacon event. `onbeacon` (now renamed to `beacon`) should work in all versions of Boomerang
@@ -343,69 +460,6 @@ export function injectedFunction(options) {
                     window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
                 };
             })(event));
-        }
-
-        // monitor AutoXHR/SPA pending events
-        if (BOOMR.plugins && BOOMR.plugins.AutoXHR) {
-            var mh = BOOMR.plugins.AutoXHR.getMutationHandler();
-
-            // var handler_resources = {
-            //     set: function(obj, prop, value) {
-            //         if (/^\d+$/.test(prop)) {
-            //             console.log("Inspector adding resource " + JSON.stringify(prop) + ": " + JSON.stringify(value));
-            //         }
-            //         obj[prop] = value;
-            //         return true;
-            //     }
-            // };
-            var handler_urls = {
-                set: function(obj, prop, value) {
-                    obj[prop] = value;
-                    if (prop) {
-                        //console.log("Inspector adding url " + JSON.stringify(prop) + ": " + JSON.stringify(value));
-
-                        var now = performance.now(), e = new Error(), message;
-                        message = {type: "track", params: {method: "autoxhr:url:add"}, stack: e.stack, timestamp: now, url: prop};
-                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                    }
-                    return true;
-                }
-            };
-
-            var handler_pending_events = {
-                // get: function __bi_get(obj, prop) {
-                //     /console.log("Inspector get " + JSON.stringify(prop));
-                //     if (prop === "undefined") debugger;
-                //     return obj[prop];
-                // },
-                set: function(obj, prop, value) {
-                    var now = performance.now(), e = new Error(), message;
-                    if (/^\d+$/.test(prop)) {
-                        if (typeof value === "undefined") {
-                            //console.log("Inspector removing event " + JSON.stringify(obj[prop]));
-
-                            message = {type: "track", params: {method: "autoxhr:event:remove", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
-                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                        }
-                        else {
-                            //console.log("Inspector adding event " + JSON.stringify(prop) + ": " + JSON.stringify(value));
-                            // if (value.resources) {
-                            //     value.resources = new Proxy(value.resources, handler_resources);  // monitor tracked resources
-                            // }
-
-                            message = {type: "track", params: {method: "autoxhr:event:add", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
-                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-
-                            value.urls = new Proxy(value.urls || {}, handler_urls);  // monitor tracked urls
-                        }
-                    }
-                    obj[prop] = value;
-                    return true;
-                }
-            };
-            mh.pending_events = new Proxy(mh.pending_events, handler_pending_events);
-
-
         }
     }
 
@@ -565,13 +619,20 @@ export function injectedFunction(options) {
 
         if (w.PerformanceObserver && PERF_OBSERVE_TYPES) {
             observer = new PerformanceObserver(function(list, obj) {
-                var now = performance.now(), message, entries = list.getEntries();
+                var now = performance.now(), message, entries = list.getEntries(), entry;
                 for (var i = 0; i < entries.length; i++) {
-                    message = {type: "event", params: {event: PERF_ENTRY_NAMES[entries[i].entryType], entry: JSON.stringify(entries[i])}, timestamp: now};
+                    try {
+                        entry = JSON.stringify(entries[i]);
+                    }
+                    catch (err) {
+                        entry = "Type: " + typeof entries[i];
+                    }
+                    // check if (PerformanceObserver.supportedEntryTypes.includes(entries[i].entryType)) ? marked as `Experimental` on MDN
+                    message = {type: "event", params: {event: PERF_OBSERVE_TYPES[entries[i].entryType], entry: entry}, timestamp: now};
                     w.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
                 }
             });
-            observer.observe({entryTypes: PERF_OBSERVE_TYPES});
+            observer.observe({entryTypes: Object.keys(PERF_OBSERVE_TYPES)});
         }
 
         if (w.ReportingObserver) {
@@ -590,7 +651,10 @@ export function injectedFunction(options) {
                     message = {type: "event", params: {event: REPORT_ENTRY_NAMES[reports[i].type], entry: JSON.stringify(event)}, timestamp: now};
                     w.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
                 }
-            }, {buffered: true});
+            }, {
+                buffered: true,
+                types: Object.keys(REPORT_ENTRY_NAMES)
+            });
             observer.observe();
         }
         else {
@@ -683,7 +747,7 @@ export function injectedFunction(options) {
                 }
 
                 // monitor calls to MutationObserver disconnect
-                if (typeof w.MutationObserver.prototype.disconnect === "function") {
+                if (typeof MutationObserver.prototype.disconnect === "function") {
                     handler = {
                         apply: function __bi_disconnect(target, thisArg, argumentsList) {
                             var now = performance.now(), e = new Error(), message;
@@ -732,12 +796,13 @@ export function injectedFunction(options) {
             }
         }
 
+        w.BOOMR.plugins = setupPluginsProxy(w.BOOMR.plugins);
         w.BOOMR = setupBOOMRProxy(w.BOOMR);
 
         // if `subscribe` isn't yet available, we'll know when it is declared using the proxy which
         // will occur earlier than listening for the `onBoomerangLoaded` event
         if (typeof w.BOOMR.subscribe === "function") {
-            boomerangLoaded();
+            boomerangDetected();
         }
         //console.log("Boomerang Inspector: init end @ " + performance.now());
     })(window);

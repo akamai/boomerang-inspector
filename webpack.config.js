@@ -90,6 +90,7 @@ module.exports = {
         from: 'manifest.json',
         to: 'manifest.json',
         transform: (content) => {
+          // strip comments out of the JSON
           const result = JSON5.parse(content.toString());
           
           result.version = version;
