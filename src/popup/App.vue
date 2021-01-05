@@ -4,7 +4,7 @@
       <table>
         <tr><td>Version</td><td>{{version || "-"}}</td></tr>
         <tr><td>Injection</td><td>{{injection || "-"}}</td></tr>
-        <tr><td>Snippet Version</td><td>{{snippetVersion || "-"}}</td></tr>
+        <tr><td>Loader Version</td><td>{{loaderVersion || "-"}}</td></tr>
         <template v-if="isMPulse">
           <tr><td>API Key</td><td>{{apikey || "-"}}</td></tr>
           <tr v-if="hasConfig"><td>Domain</td><td>{{this.domain || "-"}}</td></tr>
@@ -31,7 +31,7 @@ export default {
       apikey: "",
       domain: "",
       injection: "",
-      snippetVersion: "",
+      loaderVersion: "",
       overrides: {},
       session: {},
       config: {},
@@ -62,7 +62,7 @@ export default {
             version = params.version || "-";
             version = params.vendor ? version + " (" + params.vendor + ")" : version;
             this.version = version;
-            this.snippetVersion = params.snippetVersion;
+            this.loaderVersion = params.loaderVersion;
             if (params.vendor === "Akamai mPulse") {
                 this.isMPulse = true;
                 this.apikey = params.apikey;

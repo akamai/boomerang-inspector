@@ -11,6 +11,8 @@ Also provides a devtools tab for viewing/debugging various Boomerang and page ev
 <img src="img/devtools1.png" alt="devtools" width="400"/>
 
 
+**_NOTE:_** Does not work in Safari or mobile browsers.
+
 ## Building
 ```
 $ npm install
@@ -19,34 +21,32 @@ $ npm run-script build
 
 ## Loading
 
-To install the extension, you'll need to point your browser to the `dist` sub-directory.  Instructions for each browser:
+Per browser instructions:
+### Chromium based Chrome / Edge / Opera
 
-### Chrome
-https://developer.chrome.com/extensions/getstarted#unpacked
+- Navigate to [chrome://extensions/](chrome://extensions/), [edge://extensions/](edge://extensions/) or [opera://extensions/](opera://extensions/) depending on the browser.
+- Enable the "Developer mode" checkbox
+- Click the "Load unpacked extension..." button and select the `dist` sub-directory
 
-- Navigate to chrome://extensions/
-- "Developer mode" checkbox
-- "Load unpacked extension..." button
+See also:
+- [https://developer.chrome.com/extensions/getstarted#unpacked](https://developer.chrome.com/extensions/getstarted#unpacked)
+- [https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/getting-started/extension-sideloading](https://docs.microsoft.com/en-us/microsoft-edge/extensions-chromium/getting-started/extension-sideloading)
+- [https://dev.opera.com/extensions/testing/](https://dev.opera.com/extensions/testing/)
 
 ### Firefox
-https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Temporary_Installation_in_Firefox
 
-- Navigate to about:debugging
-- "Enable add-on debugging" checkbox
-- "Load temporary Add-on" button
+- Navigate to [about:debugging](about:debugging)
+- "Enable add-on debugging" checkbox (removed in newer versions)
+- Click the "Load Temporary Add-on" button and select the `manifest.json` file in the `dist` sub-directory
 
-### Edge
-https://docs.microsoft.com/en-us/microsoft-edge/extensions/guides/adding-and-removing-extensions
+See also [https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Temporary_Installation_in_Firefox](https://developer.mozilla.org/en-US/Add-ons/WebExtensions/Temporary_Installation_in_Firefox)
 
-- Navigate to about:flags
+### Edge (pre-Chromium)
+
+- Navigate to [about:flags](about:flags)
 - "Enable extension developer features"
 - Goto Extensions in the menu
-- "Load extension" button
+- Click the "Load extension" button and select the `dist` sub-directory
 - In the extension settings, turn it on and enable "Show button next to address bar"
 
-### Opera
-https://dev.opera.com/extensions/testing/
-
-- Navigate to opera://extensions/
-- "Developer mode" checkbox
-- "Load unpacked extension..." button
+See also [https://docs.microsoft.com/en-us/microsoft-edge/edgehtml/extensions/guides/adding-and-removing-extensions](https://docs.microsoft.com/en-us/microsoft-edge/edgehtml/extensions/guides/adding-and-removing-extensions)

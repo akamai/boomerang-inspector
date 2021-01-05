@@ -321,7 +321,7 @@ export function injectedFunction(options) {
                     else if (prop === "snippetExecuted") {
                         if (e.stack && e.stack.length) {
                             let stack = e.stack.split("\n");
-                            obj["snippetScript"] = stack[stack.length - 1];  // todo: parse better
+                            obj["loaderScript"] = stack[stack.length - 1];  // todo: parse better
                         }
                     }
                     else if (prop === "addVar") {
@@ -387,9 +387,9 @@ export function injectedFunction(options) {
         }
 
         //todo: detect adobe, gtm, tealium, etc
-        if (!data.injection && BOOMR.snippetScript) {
-            data.scriptsrc = BOOMR.snippetScript;
-            if (/ensighten.com\//.test(BOOMR.snippetScript)) {
+        if (!data.injection && BOOMR.loaderScript) {
+            data.scriptsrc = BOOMR.loaderScript;
+            if (/ensighten.com\//.test(BOOMR.loaderScript)) {
                 data.injection = "Ensighten";
             }
            // Ensighten (nexus.ensighten.com, nexus-test.ensighten.com)
@@ -399,7 +399,7 @@ export function injectedFunction(options) {
         }
 
         data.version = BOOMR.version;
-        data.snippetVersion = BOOMR.snippetVersion;
+        data.loaderVersion = BOOMR.loaderVersion;
         // snippetExecuted -> v11?
 
         // Akamai mPulse specific

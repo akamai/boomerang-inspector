@@ -18,8 +18,7 @@ module.exports = {
     'popup/popup': './popup/popup.js',
     'options/options': './options/options.js',
     'devtools/devtools': './devtools/devtools.js',
-    'devtools/devtools-panel': './devtools/devtools-panel.js',
-    //'devtools/sandbox': './devtools/sandbox.js'
+    'devtools/devtools-panel': './devtools/devtools-panel.js'
   },
   output: {
     path: path.resolve(__dirname, './dist'),
@@ -31,9 +30,15 @@ module.exports = {
         test: /\.css$/,
         use: [
           'vue-style-loader',
-          'css-loader'
+          {
+            loader: 'css-loader',
+            options: {
+              esModule: false  // TODO: workaround, otherwise replace `vue-style-loader` with `style-loader`
+            }
+          }
         ],
-      },      {
+      },
+      {
         test: /\.vue$/,
         loader: 'vue-loader',
         options: {
@@ -78,31 +83,33 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: '[name].css',
     }),
-    new CopyWebpackPlugin([
-      { from: 'icons', to: 'icons' },
-      { from: 'popup/popup.html', to: 'popup/popup.html' },
-      { from: 'options/options.html', to: 'options/options.html' },
-      { from: 'devtools/devtools.html', to: 'devtools/devtools.html' },
-      { from: 'devtools/devtools-panel.html', to: 'devtools/devtools-panel.html' },
-      //{ from: 'devtools/sandbox.html', to: 'devtools/sandbox.html' },
-      //{ from: 'devtools/css/devtools-panel.css', to: 'devtools/css/devtools-panel.css' },
+    new CopyWebpackPlugin(
       {
-        from: 'manifest.json',
-        to: 'manifest.json',
-        transform: (content) => {
-          // strip comments out of the JSON
-          const result = JSON5.parse(content.toString());
-          
-          result.version = version;
+        patterns: [
+          { from: 'icons', to: 'icons' },
+          { from: 'popup/popup.html', to: 'popup/popup.html' },
+          { from: 'options/options.html', to: 'options/options.html' },
+          { from: 'devtools/devtools.html', to: 'devtools/devtools.html' },
+          { from: 'devtools/devtools-panel.html', to: 'devtools/devtools-panel.html' },
+          {
+            from: 'manifest.json',
+            to: 'manifest.json',
+            transform: (content) => {
+              // strip comments out of the JSON
+              const result = JSON5.parse(content.toString());
+              
+              result.version = version;
 
-          // if (config.mode === 'development') {
-          //   result['content_security_policy'] = "script-src 'self' 'unsafe-eval'; object-src 'self'";
-          // }
+              // if (config.mode === 'development') {
+              //   result['content_security_policy'] = "script-src 'self' 'unsafe-eval'; object-src 'self'";
+              // }
 
-          return Buffer.from(JSON.stringify(result, null, 2));
-        },
-      },
-    ]),
+              return Buffer.from(JSON.stringify(result, null, 2));
+            },
+          }
+        ],
+      }
+    ),
   ]
 }
 
@@ -121,7 +128,7 @@ if (process.env.NODE_ENV === 'production') {
   ])
 }
 else if (process.env.NODE_ENV === 'development') {
-  module.exports.devtool = '#source-map'  // CSP compliant
+  module.exports.devtool = 'source-map'  // CSP compliant
   module.exports.plugins = (module.exports.plugins || []).concat([
     new webpack.DefinePlugin({
       'process.env': {
