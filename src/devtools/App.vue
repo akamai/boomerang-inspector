@@ -29,6 +29,29 @@
   </div>
 </template>
 
+<style scoped>
+    table {
+    color: #333;
+    font-family: Helvetica, Arial, sans-serif;
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+    }
+    th {
+    background: #F3F3F3;
+    font-weight: bold;
+    }
+    td {
+    border: 1px solid #eee;
+    }
+    tr:nth-child(even) {
+    background: #f5f5f5
+    }
+    tr:nth-child(odd) {
+    background: #fff
+    }
+</style>
+
 <script>
 "use strict";
 
