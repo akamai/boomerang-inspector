@@ -128,6 +128,8 @@ browser.runtime.onConnect.addListener(function connected(port) {
                     case "onEvent":
                         if (data.type === "domain") {
                             tabsData[tabId].domain = data.params.domain;
+                        } else if (data.type === "pageGroup") {
+                            tabsData[tabId].pageGroup = data.params.pageGroup;
                         }
                         if (portsFromDevtools[tabId]) {
                             portsFromDevtools[tabId].postMessage(message);
