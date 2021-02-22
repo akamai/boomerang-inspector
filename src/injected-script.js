@@ -399,7 +399,7 @@ export function injectedFunction(options) {
         }
 
         data.version = BOOMR.version;
-        data.loaderVersion = BOOMR.loaderVersion;
+        data.loaderVersion = BOOMR.snippetVersion;
         // snippetExecuted -> v11?
 
         // Akamai mPulse specific
