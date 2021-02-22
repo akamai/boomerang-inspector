@@ -285,13 +285,12 @@ export function injectedFunction(options) {
         var handler_addVar = {
             apply: function(target, thisArg, argumentsList) {
                 // we want to capture the mPulse "h.d" config param
-                if (argumentsList && argumentsList.length === 2) {
+                if (argumentsList && argumentsList.length >= 2) {
                     if (argumentsList[0] === "h.d") {
                         let now = performance.now(), e = new Error()
                         window.dispatchEvent(new CustomEvent("BIEvent", {detail: {type: "domain", params: {domain: argumentsList[1]}, stack: e.stack, timestamp: now}}));
                     }
-                } else if (argumentsList && argumentsList.length === 3) {
-                    if (argumentsList[0] === "h.pg") {
+                    else if (argumentsList[0] === "h.pg") {
                         let now = performance.now(), e = new Error()
                         window.dispatchEvent(new CustomEvent("BIEvent", {detail: {type: "pageGroup", params: {pageGroup: argumentsList[1]}, stack: e.stack, timestamp: now}}));
                     }
