@@ -171,42 +171,42 @@ export default {
 
                 else if (message.type === "onBeforeRequest") {
                     //
-                    if (message.data.frameId === 0) {  // only show top window activity for now
-                        //console.log("Inspector: Request queued: " + JSON.stringify(message.data));
+                    // if (message.data.frameId === 0) {  // only show top window activity for now
+                    //     //console.log("Inspector: Request queued: " + JSON.stringify(message.data));
 
-                        const event = {};
-                        event.id = eventId++;
-                        event.component = "EventItem";
-                        event.type = "request-queued";
-                        event.params = message.data;
-                        this.events.push(event);
-                    }
+                    //     const event = {};
+                    //     event.id = eventId++;
+                    //     event.component = "EventItem";
+                    //     event.type = "request-queued";
+                    //     event.params = message.data;
+                    //     this.events.push(event);
+                    // }
                 }
                 else if (message.type === "onResponseStarted") {
                     //
-                    if (message.data.frameId === 0) {  // only show top window activity for now
-                        //console.log("Inspector: Response started: " + JSON.stringify(message.data));
+                    // if (message.data.frameId === 0) {  // only show top window activity for now
+                    //     //console.log("Inspector: Response started: " + JSON.stringify(message.data));
 
-                        const event = {};
-                        event.id = eventId++;
-                        event.component = "EventItem";
-                        event.type = "response-started";
-                        event.params = message.data;
-                        this.events.push(event);
-                    }
+                    //     const event = {};
+                    //     event.id = eventId++;
+                    //     event.component = "EventItem";
+                    //     event.type = "response-started";
+                    //     event.params = message.data;
+                    //     this.events.push(event);
+                    // }
                 }
                 else if (message.type === "onCompleted") {
                     //
-                    if (message.data.frameId === 0) {  // only show top window activity for now
-                        //console.log("Inspector: Request completed: " + JSON.stringify(message.data));
+                    // if (message.data.frameId === 0) {  // only show top window activity for now
+                    //     //console.log("Inspector: Request completed: " + JSON.stringify(message.data));
 
-                        const event = {};
-                        event.id = eventId++;
-                        event.component = "EventItem";
-                        event.type = "request-completed";
-                        event.params = message.data;
-                        this.events.push(event);
-                    }
+                    //     const event = {};
+                    //     event.id = eventId++;
+                    //     event.component = "EventItem";
+                    //     event.type = "request-completed";
+                    //     event.params = message.data;
+                    //     this.events.push(event);
+                    // }
                 }
                 else if (message.type === "onEvent") {
                     // let type = "event";

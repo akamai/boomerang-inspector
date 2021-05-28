@@ -104,16 +104,16 @@ export function injectedFunction(options) {
     // FF: [ "mark", "measure", "navigation", "resource" ]
     const PERF_OBSERVE_TYPES = {
         "element": "PerformanceElementTiming",
-        "event": "PerformanceEventTiming",
+        //"event": "PerformanceEventTiming",
         "first-input": "first-input",  // doesn't have a unique interface? PerformanceEventTiming https://github.com/WICG/event-timing
         "largest-contentful-paint": "LargestContentfulPaint",  // https://github.com/WICG/largest-contentful-paint
-        "layout-shift": "LayoutShift",  // PerformanceEntry https://github.com/WICG/layout-instability
-        "longtask": "PerformanceLongTaskTiming",
-        "mark": "PerformanceMark",
-        "measure": "PerformanceMeasure",
+        //"layout-shift": "LayoutShift",  // PerformanceEntry https://github.com/WICG/layout-instability
+        //"longtask": "PerformanceLongTaskTiming",
+        //"mark": "PerformanceMark",
+        //"measure": "PerformanceMeasure",
         "navigation": "PerformanceNavigationTiming",
         "paint": "PerformancePaintTiming",
-        "resource": "PerformanceResourceTiming"
+        //"resource": "PerformanceResourceTiming"
         //"frame": "PerformanceFrameTiming"
     };
 
@@ -131,6 +131,10 @@ export function injectedFunction(options) {
         "spa_init", "spa_navigation", "spa_cancel", "xhr_send", "xhr_error", "error", "netinfo", "rage_click",
         "interaction", "before_custom_beacon"
     ];
+
+    function log(txt) {
+        console.log("%c boomerang-inspector %c " + txt, "background:#35495e; padding: 1px; border-radius: 3px 3px 3px 3px; color: #fff;", "");
+    }
 
     function monitorSetProp(obj, objName, prop, force) {
         if (force || (prop in obj && typeof obj[prop] !== "undefined")) {
@@ -212,33 +216,46 @@ export function injectedFunction(options) {
      * Monitor AutoXHR/SPA pending events and sub-resources
      */
     function setupAutoXHRPluginProxy() {
-        var mh = BOOMR.plugins.AutoXHR.getMutationHandler();
+        var mh = BOOMR.plugins.AutoXHR &&
+            typeof BOOMR.plugins.AutoXHR.getMutationHandler === "function" &&
+            BOOMR.plugins.AutoXHR.getMutationHandler();
+        
+        if (!mh) {
+            return;
+        }
 
         var handler_resources = {
             set: function(obj, prop, value) {
-
                 obj[prop] = value;
-
-                if (/^\d+$/.test(prop)) {
-                    //console.log("Inspector adding resource " + JSON.stringify(prop));
-                
-                    var now = performance.now(), e = new Error(), message;
-                    message = {type: "track", params: {method: "autoxhr:resource:add"}, stack: e.stack, timestamp: now};
-                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                try {
+                    if (/^\d+$/.test(prop)) {
+                        log("Adding resource " + JSON.stringify(prop));
+                    
+                        var now = performance.now(), e = new Error(), message;
+                        message = {type: "track", params: {method: "autoxhr:resource:add"}, stack: e.stack, timestamp: now};
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                    }
                 }
-
+                catch (e) {
+                    log("Error: " + e);
+                }
                 return true;
             }
         };
         var handler_urls = {
             set: function(obj, prop, value) {
                 obj[prop] = value;
-                if (prop) {
-                    //console.log("Inspector adding url " + JSON.stringify(prop) + ": " + JSON.stringify(value));
+                try {
+                    if (prop) {
+                        log("Adding url " + JSON.stringify(prop) + ": " + JSON.stringify(value));
 
-                    var now = performance.now(), e = new Error(), message;
-                    message = {type: "track", params: {method: "autoxhr:url:add"}, stack: e.stack, timestamp: now, url: prop};
-                    window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                        var now = performance.now(), e = new Error(), message;
+                        message = {type: "track", params: {method: "autoxhr:url:add"}, stack: e.stack, timestamp: now, url: prop};
+                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                    }
+                }
+                catch (e) {
+                    log("Error: " + e);
                 }
                 return true;
             }
@@ -251,25 +268,49 @@ export function injectedFunction(options) {
             //     return obj[prop];
             // },
             set: function(obj, prop, value) {
-                var now = performance.now(), e = new Error(), message;
-                if (/^\d+$/.test(prop)) {
-                    if (typeof value === "undefined") {
-                        //console.log("Inspector removing event " + JSON.stringify(obj[prop]));
+                try {
+                    var now = performance.now(), e = new Error(), message;
+                    if (/^\d+$/.test(prop)) {
+                        if (typeof value === "undefined") {
+                            log("Removing event " + JSON.stringify(prop) + ": " + JSON.stringify(obj[prop]));
 
-                        message = {type: "track", params: {method: "autoxhr:event:remove", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
-                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
-                    }
-                    else {
-                        //console.log("Inspector adding event " + JSON.stringify(prop) + ": " + JSON.stringify(value));
-                        if (value.resources) {
-                            value.resources = new Proxy(value.resources, handler_resources);  // monitor tracked resources
+                            message = {type: "track", params: {method: "autoxhr:event:remove", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
                         }
+                        else {
+                            log("Adding event " + JSON.stringify(prop) + ": " + JSON.stringify(value));
+                            if (typeof value.resources === "object") {
+                                value.resources = new Proxy(value.resources, handler_resources);  // monitor resources tracked using MO
+                            }
 
-                        message = {type: "track", params: {method: "autoxhr:event:add", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
-                        window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
+                            message = {type: "track", params: {method: "autoxhr:event:add", data: obj[prop]}, stack: e.stack, timestamp: now};  // old value
+                            window.dispatchEvent(new CustomEvent("BIEvent", {detail: message}));
 
-                        value.urls = new Proxy(value.urls || {}, handler_urls);  // monitor tracked urls
+                            value.urls = new Proxy(value.urls || {}, handler_urls);  // monitor tracked urls
+                            value = new Proxy(value, {
+                                set: function(_obj, _prop, _value) {
+                                    try {
+                                        const uparrow = String.fromCodePoint(0x2B06);
+                                        const dnarrow = String.fromCodePoint(0x2B07);
+                                        if (_prop === "nodes_to_wait") {
+                                            log("Event " + JSON.stringify(prop) + "; nodes_to_wait: " + JSON.stringify(_value) + " " + (_value > _obj[_prop] ? uparrow : dnarrow));
+                                        }
+                                        else if (_prop === "total_nodes") {
+                                            log("Event " + JSON.stringify(prop) + "; total_nodes: " + JSON.stringify(_value));
+                                        }
+                                    }
+                                    catch (_e) {
+                                        log("Error: " + _e);
+                                    }
+                                    _obj[_prop] = _value;
+                                    return true;
+                                }
+                            });
+                        }
                     }
+                }
+                catch (e) {
+                    log("Error: " + e);
                 }
                 obj[prop] = value;
                 return true;
@@ -313,9 +354,9 @@ export function injectedFunction(options) {
                         // log a message to the console. The console will make a stack trace for this log entry and make it easy for us to find/debug this script
                         console.log(
                             `%c boomerang-inspector %c Detected Boomerang v${value} %c`,
-                            'background:#35495e; padding: 1px; border-radius: 3px 0 0 3px; color: #fff;',
-                            'background:#0099CC; padding: 1px; border-radius: 0 3px 3px 0; color: #fff;',
-                            'background:transparent'
+                            "background:#35495e; padding: 1px; border-radius: 3px 0 0 3px; color: #fff;",
+                            "background:#0099CC; padding: 1px; border-radius: 0 3px 3px 0; color: #fff;",
+                            ""
                         )
                     }
                     else if (prop === "snippetExecuted") {
@@ -472,7 +513,7 @@ export function injectedFunction(options) {
         //console.log("Boomerang Inspector: init start @ " + performance.now());
 
         if (!performance) {
-            console.log("Boomerang Inspector: performance not found, exiting");
+            log("performance not found, exiting");
             return;
         }
 
