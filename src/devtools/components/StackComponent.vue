@@ -12,48 +12,52 @@
 </template>
 
 <script>
-export default {
-    data() {
-        return {
-            nested: true
-        }
-    },
-    props: {
-        method: "method",
-        // method: {
-        //   type: String,
-        //   required: true
-        // },
-        stack: ""
-        // {
-        //   type: Object,
-        //   required: true
-        // },
-    },
-    computed:
-    {
-        cleanStack() {
-            let stack = (this.stack || "");
-            //stack = stack.replace(/(https?:\/\/.*:\d+:\d+)/, '<a href="$1" tabindex="-1">$1</a>');//'<span role="link" tabindex="-1">$1</span>');
-            stack = stack.split("\n");
-            if (!stack.length) {
-                return [""];
-            }
-            if (stack[0] === "Error") {
-                stack.shift();
-            }
-            if (!stack.length) {
-                return [""];
-            }
-            if (/__bi_/.test(stack[0])) {
-                stack.shift();
-            }
-            stack = stack.map(function(s) { return s.trim(); });
-            
-            return stack;
-        },
-    }
-}
+import { defineComponent } from 'vue';
+
+export default defineComponent({
+  data() {
+      return {
+          nested: true
+      }
+  },
+
+  props: {
+      method: "method",
+      // method: {
+      //   type: String,
+      //   required: true
+      // },
+      stack: ""
+      // {
+      //   type: Object,
+      //   required: true
+      // },
+  },
+
+  computed:
+  {
+      cleanStack() {
+          let stack = (this.stack || "");
+          //stack = stack.replace(/(https?:\/\/.*:\d+:\d+)/, '<a href="$1" tabindex="-1">$1</a>');//'<span role="link" tabindex="-1">$1</span>');
+          stack = stack.split("\n");
+          if (!stack.length) {
+              return [""];
+          }
+          if (stack[0] === "Error") {
+              stack.shift();
+          }
+          if (!stack.length) {
+              return [""];
+          }
+          if (/__bi_/.test(stack[0])) {
+              stack.shift();
+          }
+          stack = stack.map(function(s) { return s.trim(); });
+          
+          return stack;
+      },
+  },
+});
 </script>
 
 <style scoped>

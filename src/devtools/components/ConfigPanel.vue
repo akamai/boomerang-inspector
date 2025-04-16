@@ -8,7 +8,9 @@
 </template>
 
 <script>
-export default {
+import { defineComponent } from 'vue';
+
+export default defineComponent({
   props: {
     overrides: {
         type: Object,
@@ -19,6 +21,7 @@ export default {
       required: true
     }
   },
+
   computed: {
     formattedOverrides(){
       return JSON.stringify(this.overrides, null, 4);
@@ -26,6 +29,6 @@ export default {
     formattedConfig() {
       return JSON.stringify(this.config, null, 4);
     }
-  }
-}
+  },
+});
 </script>

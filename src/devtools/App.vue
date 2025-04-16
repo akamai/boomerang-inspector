@@ -30,6 +30,8 @@
 </template>
 
 <script>
+import { defineComponent } from 'vue';
+
 "use strict";
 
 import { getBeaconType } from './utils/beacon.js'
@@ -41,8 +43,9 @@ import ConfigPanel from './components/ConfigPanel';
 
 var eventId = 0;
 
-export default {
+export default defineComponent({
   name: 'app',
+
   data() {
     return {
       version: undefined,
@@ -53,6 +56,7 @@ export default {
       events: []
     }
   },
+
   computed: {
       filteredEvents() {
           return this.events;
@@ -61,15 +65,18 @@ export default {
           return this.session.start ? new Date(this.session.start) : undefined;
       }
   },
+
   components: {
       EventPanel,
       ConfigPanel
   },
+
   methods: {
       clearEvents() {
           this.events = [];
       }
   },
+
   mounted() {
       if (browser) {
         const tabId = browser.devtools.inspectedWindow.tabId;
@@ -234,8 +241,8 @@ export default {
             }
         });
       }
-  }
-}
+  },
+});
 </script>
 
 <style scoped>
