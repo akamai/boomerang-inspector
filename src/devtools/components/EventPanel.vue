@@ -49,21 +49,26 @@
 </style>
 
 <script>
+import { defineComponent } from 'vue';
+
 import StackComponent from './StackComponent';
 import BeaconItem from './BeaconItem';
 import EventItem from './EventItem';
 
-export default {
+export default defineComponent({
+  emits: ['clearEvents'],
+
   props: {
     events: {
         type: Array,
         required: true
     }
   },
+
   components: {
     StackComponent,
     BeaconItem,
     EventItem
-  }
-}
+  },
+});
 </script>

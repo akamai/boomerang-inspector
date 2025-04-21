@@ -24,7 +24,9 @@
 </template>
 
 <script>
-export default {
+import { defineComponent } from 'vue';
+
+export default defineComponent({
   data() {
     return {
       version: "",
@@ -38,6 +40,7 @@ export default {
       isMPulse: false
     }
   },
+
   computed: {
       hasConfig() {
           return Object.keys(this.config).length !== 0;
@@ -52,6 +55,7 @@ export default {
           return this.session.rate_limited;
       }
   },
+
   mounted() {
     var browser = browser || chrome;
     browser.tabs.query({active: true, currentWindow: true}, (tabs) => {
@@ -75,8 +79,8 @@ export default {
         }
       });
     });
-  }
-}
+  },
+});
 </script>
 
 <style scoped>
