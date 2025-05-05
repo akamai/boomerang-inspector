@@ -6,6 +6,7 @@
         <tr><td>Injection</td><td>{{injection || "-"}}</td></tr>
         <tr><td>Loader Version</td><td>{{loaderVersion || "-"}}</td></tr>
         <template v-if="isMPulse">
+          <tr><td>Page Group</td><td>{{ pageGroup }}</td></tr>
           <tr><td>API Key</td><td>{{apikey || "-"}}</td></tr>
           <tr v-if="hasConfig"><td>Domain</td><td>{{this.domain || "-"}}</td></tr>
           <tr><td>Config Received</td><td>{{hasConfig? "Yes" : "No"}}</td></tr>
@@ -34,6 +35,7 @@ export default defineComponent({
       domain: "",
       injection: "",
       loaderVersion: "",
+      pageGroup: "",
       overrides: {},
       session: {},
       config: {},
@@ -74,6 +76,7 @@ export default defineComponent({
                 this.injection = params.injection;
                 this.overrides = params.BOOMR_config || {};
                 this.config = data.config || {};
+                this.pageGroup = data.pageGroup || "No page group";
             }
             this.session = data.session || {};
         }

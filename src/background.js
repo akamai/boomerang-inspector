@@ -129,6 +129,10 @@ browser.runtime.onConnect.addListener(function connected(port) {
                         if (data.type === "domain") {
                             tabsData[tabId].domain = data.params.domain;
                         }
+                        else if (data.type === "pageGroup") {
+                            // set pageGroup if it has not already been set, to capture base page and ignore subsequent XHRs
+                            tabsData[tabId].pageGroup = tabsData[tabId].pageGroup || data.params.pageGroup;
+                        }
                         if (portsFromDevtools[tabId]) {
                             portsFromDevtools[tabId].postMessage(message);
                         }
