@@ -40,5 +40,14 @@
     "options_ui": {
         "page":"options/options.html"
     },
+    "commands": {
+        "_execute_browser_action": {
+          "suggested_key": {
+            "default": "Ctrl+Shift+B",
+            "mac": "MacCtrl+Shift+B"
+          },
+          "description": "Opens Boomerang Inspector"
+        }
+    },
     "manifest_version": 2
 }

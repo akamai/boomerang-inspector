@@ -2,6 +2,12 @@
     <table>
       <thead>
         <tr><td><button @click="$emit('clearEvents')">Clear Events</button></td></tr>
+        <tr>
+          <th>TimeStamp</th>
+          <th>Type</th>
+          <th>Stack</th>
+          <th>Component</th>
+        </tr>
       </thead>
       <tfoot>
         <tr><td><button @click="$emit('clearEvents')">Clear Events</button></td></tr>
@@ -36,6 +42,7 @@
     th {
     background: #F3F3F3;
     font-weight: bold;
+    text-align: left;
     }
     td {
     border: 1px solid #eee;
