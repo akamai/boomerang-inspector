@@ -17,7 +17,7 @@
         "copy-webpack-plugin": "^7.0.0",
         "cross-env": "^7.0.3",
         "css-loader": "^5.2.7",
-        "eslint": "^7.32.0",
+        "eslint": "^9.39.1",
         "json5": "2.2.2",
         "mini-css-extract-plugin": "^1.6.2",
         "resourcetiming-compression": "^1.4.0",
