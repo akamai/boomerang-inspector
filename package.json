@@ -25,7 +25,7 @@
         "usertiming-compression": "^0.1.9",
         "vue": "^3.5.13",
         "vue-loader": "^16.8.3",
-        "webpack": "^5.99.5",
+        "webpack": "^5.105.0",
         "webpack-cli": "^4.10.0"
     }
 }
